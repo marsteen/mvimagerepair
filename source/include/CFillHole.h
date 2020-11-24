@@ -9,37 +9,37 @@
 //
 //---------------------------------------------------------------------------
 
-template <typename Tdepth>
+template<typename Tdepth>
 class CFillHole
 {
-	public:
-	
-	
-	  CFillHole()
-	  {
-	    mHoleCount = 0;
-	    mSource    = NULL;
-	  }
+    public:
 
-		void Init(mvlib::SDataRect* Source);
-		void FillY();
-		void FillX();
-		void ReplacePixels();
-		void Smooth();
-		void Randomize(int k);
-		void Finish();
-		void CreatePtrLists();
 
-		int         mHoleCount;
+        CFillHole()
+        {
+            mHoleCount = 0;
+            mSource = NULL;
+        }
 
-	protected:
 
-		void FillPixelValue(CHole<Tdepth>* BeginHole, Tdepth val);
+        void Init(mvlib::SDataRect* Source, Tdepth& wrongp);
+        void FillY();
+        void FillX();
+        void ReplacePixels();
+        void Smooth();
+        void Randomize(int k);
+        void Finish();
+        void CreatePtrLists();
 
-		mvlib::SDataRect*  mSource;
-		int                mWrongPixel;
-		CHoleList<Tdepth>* mHoleList;
+        int mHoleCount;
 
+    protected:
+
+        void FillPixelValue(CHole<Tdepth>* BeginHole, Tdepth val);
+
+        mvlib::SDataRect* mSource;
+        Tdepth mWrongPixel;
+        CHoleList<Tdepth>* mHoleList;
 };
 
 

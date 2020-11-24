@@ -12,8 +12,6 @@
 //
 //***************************************************************************
 
-
-
 #include <iostream>
 #include <fstream>
 #include <CHoleList.h>
@@ -32,7 +30,6 @@ using namespace std;
 using namespace mvlib;
 
 
-
 //---------------------------------------------------------------------------
 //
 // Klasse:    static
@@ -41,39 +38,41 @@ using namespace mvlib;
 //
 //---------------------------------------------------------------------------
 
-template <typename T>
-static void ProcessFillhole(SDataRect* dr, const char* NewFile, int SmoothFaktor, int RandomFaktor)
+template<typename T>
+static void ProcessFillhole(SDataRect* dr, int SmoothFaktor, int RandomFaktor, T wrongp)
 {
-	CFillHole<T> FillHole;
-	FillHole.Init(dr);
-	FillHole.FillY();
+    CFillHole<T> FillHole;
 
-	if (FillHole.mHoleCount > 0)
-	{
-		FillHole.FillX();
+    FillHole.Init(dr, wrongp);
+    
+    FillHole.FillY();
 
-		cout << "  Smoothing: "  << SmoothFaktor<< endl;
-		for (int i = 0; i < SmoothFaktor; i++)
-		{
-			FillHole.ReplacePixels();
-			FillHole.Smooth();
-		}
+    if (FillHole.mHoleCount > 0)
+    {
+        FillHole.FillX();
 
-		FillHole.ReplacePixels();
+        cout << "  Smoothing: "  << SmoothFaktor<< endl;
+        for (int i = 0; i < SmoothFaktor; i++)
+        {
+            FillHole.ReplacePixels();
+            FillHole.Smooth();
+        }
 
-		cout << "  Randomize:" << RandomFaktor  << endl;
-		FillHole.Randomize(RandomFaktor);
+        FillHole.ReplacePixels();
 
-		cout << "  Writing " << NewFile << endl;
-		cout << "  w=" << dr->mWidth << " h=" << dr->mHeight << " b=" << dr->mBits << endl;
+        cout << "  Randomize:" << RandomFaktor  << endl;
+        FillHole.Randomize(RandomFaktor);
 
-		//dr->SwapWords();
+        //cout << "  Writing " << NewFile << endl;
+        cout << "  w=" << dr->mWidth << " h=" << dr->mHeight << " b=" << dr->mBits << endl;
+
+        //dr->SwapWords();
         mv_graphics_tools_swapwords(dr);
-        mv_graphics_png_write(NewFile, dr->mData, dr->mWidth, dr->mHeight, dr->mBits);
-	}
-	FillHole.Finish();
-	cout << "OK." << endl;
+    }
+    FillHole.Finish();
+    cout << "OK." << endl;
 }
+
 
 //---------------------------------------------------------------------------
 //
@@ -83,23 +82,27 @@ static void ProcessFillhole(SDataRect* dr, const char* NewFile, int SmoothFaktor
 //
 //---------------------------------------------------------------------------
 
-#define WRONG_PIXEL_16BIT 30000
+#define WRONG_PIXEL_16BIT    30000
 
-static int CountMaskPixels(SDataRect* glib)
+static int CountMaskPixels(const SDataRect* glib)
 {
-  int m = 0;
-	for (int y = 0; y < glib->mHeight; y++)
-	for (int x = 0; x < glib->mWidth; x++)
-	{
-	  short* pix =  ((short*) glib->mData) + glib->Offset(x, y);
+    int m = 0;
 
-	  if (*pix == WRONG_PIXEL_16BIT)
-	  {
-	    m++;
-	  }
-	}
-	return m;
+    for (int y = 0; y < glib->mHeight; y++)
+    {
+        for (int x = 0; x < glib->mWidth; x++)
+        {
+            short* pix = ((short*)glib->mData) + glib->Offset(x, y);
+
+            if (*pix == WRONG_PIXEL_16BIT)
+            {
+                m++;
+            }
+        }
+    }
+    return m;
 }
+
 
 //---------------------------------------------------------------------------
 //
@@ -111,60 +114,164 @@ static int CountMaskPixels(SDataRect* glib)
 
 static bool ProcessMaskFile(const char* MaskFile, SDataRect* glib)
 {
-  bool r = false;
-  
-  int MaskPixels = 0;
+    bool r = false;
 
-  SDataRect mask_png;
-  if (mv_graphics_png_read(MaskFile, &mask_png.mData, &mask_png.mWidth, &mask_png.mHeight, &mask_png.mBits, 0))
-  {
-    cout << "  Graf: w=" << glib->mWidth << " h=" << glib->mHeight << " b=" << glib->mBits << endl;
-    cout << "  Mask: w=" << mask_png.mWidth << " h=" << mask_png.mHeight << " b=" << mask_png.mBits << endl;
+    int MaskPixels = 0;
 
+    SDataRect mask_png;
 
-    if ((mask_png.mWidth == glib->mWidth) &&
-        (mask_png.mHeight == glib->mHeight))
+    if (mv_graphics_png_read(MaskFile, &mask_png.mData, &mask_png.mWidth, &mask_png.mHeight, &mask_png.mBits, 0))
     {
-			for (int y = 0; y < glib->mHeight; y++)
-			{
-				//cout << "Line:" << y << endl;
-
-				for (int x = 0; x < glib->mWidth; x++)
-				{
-					const SPixel24* mask = ((SPixel24*) mask_png.mData) + mask_png.Offset(x, y);
-
-					short* pix =  ((short*) glib->mData) + glib->Offset(x, y);
-
-					if ((mask->colors[0] == 0xFF) &&
-							(mask->colors[1] == 0x1) &&
-							(mask->colors[2] == 0xFF))  // Magenta
-					{
-						*pix = WRONG_PIXEL_16BIT;
-						MaskPixels++;
-					}
-				}
-			}
-			delete[] mask_png.mData;
-
-			#if 0
-			CGraflibPng test;
-			test.CopyDataFrom(glib);
-			//test.SwapWords();
-			test.Write("test.png");
-			#endif
+        cout << "  Graf: w=" << glib->mWidth << " h=" << glib->mHeight << " b=" << glib->mBits << endl;
+        cout << "  Mask: w=" << mask_png.mWidth << " h=" << mask_png.mHeight << " b=" << mask_png.mBits << endl;
 
 
-			cout << "  MaskPixels:" << MaskPixels << endl;
-			//CountMaskPixels(glib);
-			r = true;
-		}
-		else
-		{
-		  cout << "***** Groesse der Maske und der Grafik sind nicht gleich!" << endl;
-		}
-  }
-  return r;
-}  
+        if ((mask_png.mWidth == glib->mWidth) &&
+            (mask_png.mHeight == glib->mHeight))
+        {
+            for (int y = 0; y < glib->mHeight; y++)
+            {
+                //cout << "Line:" << y << endl;
+
+                for (int x = 0; x < glib->mWidth; x++)
+                {
+                    const SPixel24* mask = ((SPixel24*)mask_png.mData) + mask_png.Offset(x, y);
+
+                    short* pix = ((short*)glib->mData) + glib->Offset(x, y);
+
+                    if ((mask->colors[0] == 0xFF) &&
+                        (mask->colors[1] == 0x1) &&
+                        (mask->colors[2] == 0xFF))      // Magenta
+                    {
+                        *pix = WRONG_PIXEL_16BIT;
+                        MaskPixels++;
+                    }
+                }
+            }
+            delete[] mask_png.mData;
+
+#if 0
+            CGraflibPng test;
+            test.CopyDataFrom(glib);
+            //test.SwapWords();
+            test.Write("test.png");
+#endif
+
+
+            cout << "  MaskPixels:" << MaskPixels << endl;
+            //CountMaskPixels(glib);
+            r = true;
+        }
+        else
+        {
+            cout << "***** Groesse der Maske und der Grafik sind nicht gleich!" << endl;
+        }
+    }
+    return r;
+}
+
+//---------------------------------------------------------------------------
+//
+// Klasse:    static
+// Methode:   SeparateLayers
+//
+//
+//---------------------------------------------------------------------------
+
+static SDataRect* SeparateLayers(const SDataRect* dr, int& layers)
+{
+    layers = dr->mBits / 8;
+    SDataRect* dr8   = new SDataRect[layers];
+    SPixel24*  dr24ptr = (SPixel24*) dr->mData;
+    
+   // cout << "layers=" << layers << endl;
+    
+    for (int i = 0; i < layers; i++)
+    {
+     //   cout << "i=" << i << endl;
+        dr8[i].mWidth  = dr->mWidth;
+        dr8[i].mHeight = dr->mHeight;
+        dr8[i].mBits   = 8;
+        dr8[i].mData   = new char[dr->mWidth * dr->mHeight];
+        char* dr8ptr = dr8[i].mData;
+        for (int y = 0; y < dr->mHeight; y++)
+        {
+            for (int x = 0; x < dr->mWidth; x++)
+            {
+                unsigned int Offset = dr8->Offset(x, y);
+                dr8ptr[Offset] = dr24ptr[Offset].colors[i];
+            }
+        }
+    }
+    return dr8;
+}
+
+//---------------------------------------------------------------------------
+//
+// Klasse:    static
+// Methode:   JoinLayers
+//
+//
+//---------------------------------------------------------------------------
+
+static SDataRect* JoinLayers(const SDataRect* dr8, int layers)
+{
+    SDataRect* dr24 = new SDataRect; 
+    dr24->mWidth  = dr8->mWidth;
+    dr24->mHeight = dr8->mHeight;
+    dr24->mBits = layers * 8;
+    
+    dr24->mData = new char[dr24->mWidth * dr24->mHeight * layers];
+    SPixel24* dr24ptr = (SPixel24*) dr24->mData;        
+        
+    for (int i = 0; i < layers; i++)
+    {
+        char* dr8ptr = dr8[i].mData;
+        for (int y = 0; y < dr8->mHeight; y++)
+        {
+            for (int x = 0; x < dr8->mWidth; x++)
+            {
+                unsigned int Offset = dr8->Offset(x, y);
+                dr24ptr[Offset].colors[i] = dr8ptr[Offset];
+            }
+        }
+    }
+    return dr24;
+}
+
+
+//---------------------------------------------------------------------------
+//
+// Klasse:    static
+// Methode:   FillHoles24
+//
+//
+//---------------------------------------------------------------------------
+
+SDataRect* FillHoles24(const SDataRect* dr24, int SmoothFaktor, int RandFaktor)
+{
+    int layers;
+    SDataRect* dr8 = SeparateLayers(dr24, layers);
+    cout << "SeparateLayers OK layers=" << layers << endl;
+    
+    for (int i = 0; i < 3; i++)
+    {
+        ProcessFillhole<unsigned char>(dr8 + i, SmoothFaktor, RandFaktor, 0);
+    }
+    cout << "ProcessFillhole OK" << endl;
+    
+    SDataRect* dr24new = JoinLayers(dr8, layers);
+    
+    for (int i = 0; i < layers; i++)
+    {
+        delete dr8[i].mData;
+    }
+    delete dr8;
+    return dr24new;
+    
+}
+
+
 
 //---------------------------------------------------------------------------
 //
@@ -176,95 +283,107 @@ static bool ProcessMaskFile(const char* MaskFile, SDataRect* glib)
 
 int main(int argc, char* argv[])
 {
-
-	if (argc >= 2)
-	{
-
-		const char*  MaskFile = NULL;
-		const char*  OutFile = "output-fillholes.png";
-		int          AnzahlFiles;
-		int          SmoothFaktor = 0;
-		int          RandFaktor = 2;
-
-
-   	for (int i = 2; i < argc; i++)
-   	{
-   	   std::string cmd = argv[i];
-
-   	  if (cmd == "-smooth")
-   	  {
-   	    SmoothFaktor = mvStringtool::Cast<int>(argv[i+1]);
-   	  }
-   	  else
-   	  if (cmd == "-random")
-   	  {
-   	    RandFaktor = mvStringtool::Cast<int>(argv[i+1]);
-   	  }
-   	  else
-   	  if (cmd == "-mask")
-   	  {
-   	    MaskFile = argv[i+1];
-   	    cout << "  mask file:" << MaskFile << endl;
-   	    i += 1;
-   	  }
-   	  else
-   	  if (cmd == "-outfile")
-   	  {
-   	    OutFile = argv[i+1];
-   	    cout << "  output file:" << OutFile << endl;
-   	    i += 1;
-   	  }
-   	}
-
-    SDataRect dr;
-    if (mv_graphics_png_read(argv[1], &dr.mData, &dr.mWidth, &dr.mHeight, &dr.mBits, 0))
+    if (argc >= 2)
     {
-		  cout << "File:" << argv[1]  << endl;
+        const char* MaskFile = NULL;
+        const char* OutFile = "output-fillholes.png";
+        int AnzahlFiles;
+        int SmoothFaktor = 0;
+        int RandFaktor = 1;
 
-		  if (MaskFile != NULL)
-		  {
-		    ProcessMaskFile(MaskFile, &dr);
-		  }
+
+        for (int i = 2; i < argc; i++)
+        {
+            std::string cmd = argv[i];
+
+            if (cmd == "-smooth")
+            {
+                SmoothFaktor = mvStringtool::Cast<int>(argv[i+1]);
+            }
+            else
+            if (cmd == "-random")
+            {
+                RandFaktor = mvStringtool::Cast<int>(argv[i+1]);
+            }
+            else
+            if (cmd == "-mask")
+            {
+                MaskFile = argv[i+1];
+                cout << "  mask file:" << MaskFile << endl;
+                i += 1;
+            }
+            else
+            if (cmd == "-outfile")
+            {
+                OutFile = argv[i+1];
+                cout << "  output file:" << OutFile << endl;
+                i += 1;
+            }
+        }
+
+        SDataRect dr;
+        if (mv_graphics_png_read(argv[1], &dr.mData, &dr.mWidth, &dr.mHeight, &dr.mBits, 0))
+        {
+            cout << "File:" << argv[1]  << endl;
+
+            if (MaskFile != NULL)
+            {
+                ProcessMaskFile(MaskFile, &dr);
+            }
 
 
-			switch (dr.mBits)
-			{
-            case 8:
+            switch (dr.mBits)
+            {
+                case 8:
 
-		       ProcessFillhole<unsigned char>(&dr, OutFile, SmoothFaktor, RandFaktor);
-		       break;
+                    ProcessFillhole<unsigned char>(&dr, SmoothFaktor, RandFaktor, 0);
+                    break;
 
-		     case 16:
+                case 16:
 
-		       ProcessFillhole<short>(&dr, OutFile, SmoothFaktor, RandFaktor);
- 		       break;
+                    ProcessFillhole<short>(&dr, SmoothFaktor, RandFaktor, 0);
+                    break;
+                    
+                case 24:
+                case 32:
+                {
+                    SDataRect* drnew =FillHoles24(&dr, SmoothFaktor, RandFaktor);
+                    delete[] dr.mData;
+                    dr.mData = drnew->mData;
+                    delete drnew;       
 
- 		     case 24:
+                    mv_graphics_tools_swapredblue(&dr);
+                    
+                    cout << "result: " << endl;
+                    cout << "  width :" << dr.mWidth << endl;
+                    cout << "  height:" << dr.mHeight << endl;
+                    cout << "  bits  :" << dr.mBits << endl;
+                }
+                break;
 
-		       ProcessFillhole<SPixel24>(&dr, OutFile, SmoothFaktor, RandFaktor);
- 		       break;
+                default:
+     
+                  cout << "***** ERROR Bit depth not supported:" << dr.mBits << endl;
+                  break;
+     
+            }
+            mv_graphics_png_write("ouput.png", dr.mData, dr.mWidth, dr.mHeight, dr.mBits);
 
- 		     default:
+        }
+    }
+    else
+    {
+        cout	<< "usage: fillholes <file.png>"
+                << "  options:" << endl
+                << "  [-smooth n] = number of smooth stages" << endl
+                << "  [-random n] = number of randomize stages" << endl
+                << "  [-mask <maskfile.png>] = optional mask file" << endl
+                << "  [-outfile <file>] = optional output file" << endl
+                << endl
+                << "  supported files (source): 8 bit PNG, 16 bit PNG" << endl
+                << "                  (mask)  : 24 bit PNG" << endl
+                << "version 3.0" << endl;
+    }
 
- 		       cout << "***** ERROR Bit depth not supported:" << dr.mBits << endl;
- 		       break;
-
-			}
-		}
-	}
-	else
-	{
-		cout << "usage: fillholes <file.png>"
-		     << "  options:" << endl
-		     << "  [-smooth n] = number of smooth stages" << endl
-		     << "  [-random n] = number of randomize stages" << endl
-		     << "  [-mask <maskfile.png>] = optional mask file" << endl
-		     << "  [-outfile <file>] = optional output file" << endl
-		     << endl
-		     << "  supported files (source): 8 bit PNG, 16 bit PNG" << endl
-		     << "                  (mask)  : 24 bit PNG" << endl
-		     << "version 3.0 / ksti GmbH 2020" << endl;
-	}
-
-	return 0;
+    return 0;
 }

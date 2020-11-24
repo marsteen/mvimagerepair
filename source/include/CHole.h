@@ -14,22 +14,23 @@
 //
 //---------------------------------------------------------------------------
 
-template <typename Tdepth>
+template<typename Tdepth>
 class CHole : public CListElem<CHole<Tdepth> >
 {
-	public:
+    public:
 
-		CHole()
-		{
-			mXcount = 0;
-			mYcount = 0;
-		}
+        CHole()
+        {
+            mXcount = 0;
+            mYcount = 0;
+        }
 
-		int           mYval;
-		Tdepth        mPixel;
 
-		int           mXcount;
-		int           mYcount;
+        int mYval;
+        Tdepth mPixel;
+
+        int mXcount;
+        int mYcount;
 };
 
 

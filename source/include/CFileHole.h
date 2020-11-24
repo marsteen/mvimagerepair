@@ -7,30 +7,29 @@
 //
 //---------------------------------------------------------------------------
 
-template <typename Tdepth>
+template<typename Tdepth>
 class CFillHole
 {
-	public:
+    public:
 
-		void Init(CDataRect* Source);
-		void FillY(void);
-		void FillX(void);
-		void ReplacePixels(void);
-		void Smooth(void);
-		void Randomize(int k);
-		void Finish(void);
-		void CreatePtrLists(void);
+        void Init(CDataRect* Source);
+        void FillY(void);
+        void FillX(void);
+        void ReplacePixels(void);
+        void Smooth(void);
+        void Randomize(int k);
+        void Finish(void);
+        void CreatePtrLists(void);
 
-		int mHoleCount;
+        int mHoleCount;
 
-	protected:
+    protected:
 
-		void FillPixelValue(CHole<Tdepth>* BeginHole, Tdepth val);
+        void FillPixelValue(CHole<Tdepth>* BeginHole, Tdepth val);
 
-		CDataRect*         mSource;
-		Tdepth             mWrongPixel;
-		CHoleList<Tdepth>* mHoleList;
-
+        CDataRect* mSource;
+        Tdepth mWrongPixel;
+        CHoleList<Tdepth>* mHoleList;
 };
 
 #endif

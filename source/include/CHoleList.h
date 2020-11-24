@@ -9,25 +9,26 @@
 //
 //---------------------------------------------------------------------------
 
-template <typename Tdepth>
+template<typename Tdepth>
 class CHoleList : public CList<CHole<Tdepth> >
 {
-	public:
+    public:
 
-		CHoleList()
-		{
-			mPtrList = NULL;
-		}
+        CHoleList()
+        {
+            mPtrList = NULL;
+        }
 
-		CHole<Tdepth>*  Search(int y);
-		CHole<Tdepth>*  Search2(int y);
-		CHole<Tdepth>** mPtrList;
-		int             mCount;
 
-	protected:
+        CHole<Tdepth>*  Search(int y);
+        CHole<Tdepth>*  Search2(int y);
 
-		CHole<Tdepth>* Search2(int Left, int Right, int y);
+        CHole<Tdepth>** mPtrList;
+        int mCount;
 
+    protected:
+
+        CHole<Tdepth>* Search2(int Left, int Right, int y);
 };
 
 
