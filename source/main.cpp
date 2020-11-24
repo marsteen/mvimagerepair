@@ -178,13 +178,14 @@ static bool ProcessMaskFile(const char* MaskFile, SDataRect* glib)
 //
 //---------------------------------------------------------------------------
 
+template <typename Tpixel>
 static SDataRect* SeparateLayers(const SDataRect* dr, int& layers)
 {
     layers = dr->mBits / 8;
     SDataRect* dr8   = new SDataRect[layers];
-    SPixel24*  dr24ptr = (SPixel24*) dr->mData;
+    Tpixel*  dr24ptr = (Tpixel*) dr->mData;
     
-   // cout << "layers=" << layers << endl;
+    cout << "layers=" << layers << endl;
     
     for (int i = 0; i < layers; i++)
     {
@@ -202,7 +203,15 @@ static SDataRect* SeparateLayers(const SDataRect* dr, int& layers)
                 dr8ptr[Offset] = dr24ptr[Offset].colors[i];
             }
         }
+        /*
+        char filename[256];
+        sprintf(filename, "output-layer-%d.png", i);
+        mv_graphics_png_write(filename, dr8[i].mData, dr8[i].mWidth, dr8[i].mHeight, dr8[i].mBits);
+        */
     }
+     
+    
+    
     return dr8;
 }
 
@@ -222,10 +231,13 @@ static SDataRect* JoinLayers(const SDataRect* dr8, int layers)
     dr24->mBits = layers * 8;
     
     dr24->mData = new char[dr24->mWidth * dr24->mHeight * layers];
-    SPixel24* dr24ptr = (SPixel24*) dr24->mData;        
+    SPixel24* dr24ptr = (SPixel24*) dr24->mData; 
+
+    cout << "JoinLayers layers=" << layers << endl;
         
     for (int i = 0; i < layers; i++)
     {
+        cout << "  i=" << i << endl;
         char* dr8ptr = dr8[i].mData;
         for (int y = 0; y < dr8->mHeight; y++)
         {
@@ -251,16 +263,33 @@ static SDataRect* JoinLayers(const SDataRect* dr8, int layers)
 SDataRect* FillHoles24(const SDataRect* dr24, int SmoothFaktor, int RandFaktor)
 {
     int layers;
-    SDataRect* dr8 = SeparateLayers(dr24, layers);
-    cout << "SeparateLayers OK layers=" << layers << endl;
-    
-    for (int i = 0; i < 3; i++)
+    int outLayers = 3;
+    SDataRect* dr8;
+
+    if (dr24->mBits == 24)
     {
-        ProcessFillhole<unsigned char>(dr8 + i, SmoothFaktor, RandFaktor, 0);
+        dr8 = SeparateLayers<SPixel24>(dr24, layers);
+    }
+    else
+    if (dr24->mBits == 32)
+    {
+        dr8 = SeparateLayers<SPixel32>(dr24, layers);
+    }
+   
+    
+    cout << "SeparateLayers OK layers=" << layers << endl;
+        
+    for (int i = 0; i < outLayers; i++)
+    {
+       ProcessFillhole<unsigned char>(dr8 + i, SmoothFaktor, RandFaktor, 0);
     }
     cout << "ProcessFillhole OK" << endl;
     
-    SDataRect* dr24new = JoinLayers(dr8, layers);
+    SDataRect* dr24new = JoinLayers(dr8, outLayers);
+    
+    cout << "JoinLayers OK" << endl;
+    
+    
     
     for (int i = 0; i < layers; i++)
     {
@@ -350,6 +379,7 @@ int main(int argc, char* argv[])
                     SDataRect* drnew =FillHoles24(&dr, SmoothFaktor, RandFaktor);
                     delete[] dr.mData;
                     dr.mData = drnew->mData;
+                    dr.mBits = drnew->mBits;
                     delete drnew;       
 
                     mv_graphics_tools_swapredblue(&dr);
