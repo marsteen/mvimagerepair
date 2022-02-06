@@ -1,7 +1,7 @@
 //***************************************************************************
 //
 //
-// @PROJECT  :	Map Profiles
+// @PROJECT  :	ImageRepair
 // @VERSION  :	1.0
 // @FILENAME :	main.cpp
 // @DATE     :	28.8.2014
@@ -403,16 +403,17 @@ int main(int argc, char* argv[])
     }
     else
     {
-        cout	<< "usage: fillholes <file.png>"
+        cout	<< "usage: mvimagerepair <file.png>"
                 << "  options:" << endl
                 << "  [-smooth n] = number of smooth stages" << endl
                 << "  [-random n] = number of randomize stages" << endl
-                << "  [-mask <maskfile.png>] = optional mask file" << endl
                 << "  [-outfile <file>] = optional output file" << endl
+                << "  supported files: 24 or 32 bit PNG" << endl
                 << endl
-                << "  supported files (source): 8 bit PNG, 16 bit PNG" << endl
-                << "                  (mask)  : 24 bit PNG" << endl
-                << "version 3.0" << endl;
+                << "  *** Mark the errors in the picture with BLACK color (#000000)" 
+                << "  *** and run the tool" << endl
+                << endl
+                << "version 4.0" << endl;
     }
 
     return 0;
