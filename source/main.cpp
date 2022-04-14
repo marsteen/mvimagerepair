@@ -14,6 +14,8 @@
 
 #include <iostream>
 #include <fstream>
+#include <map>
+#include <set>
 #include <CHoleList.h>
 #include <CFillHole.h>
 #include <mvlib/graphics/SPixel24.h>
@@ -302,6 +304,127 @@ SDataRect* FillHoles24(const SDataRect* dr24, int SmoothFaktor, int RandFaktor)
 
 
 
+
+
+
+bool mapHasVal(const std::map<short, int>& vmap, short value)
+{
+    return vmap.find(value) != vmap.end();
+}
+//---------------------------------------------------------------------------
+//
+// Klasse:    static
+// Methode:   FindValues
+//
+//
+//---------------------------------------------------------------------------
+
+
+struct SValpair
+{
+  bool operator<(const SValpair& k) const
+  {
+      return count < k.count;
+  }    
+  short value;
+  unsigned int count;
+  
+};
+
+
+//---------------------------------------------------------------------------
+//
+// Klasse:    static
+// Methode:   FindValues
+//
+//
+//---------------------------------------------------------------------------
+
+static unsigned int FindValues(const char* filename, int vmin, int vmax)
+{
+    std::map<short, int> vmap;
+    
+    unsigned int count = 0;
+    SDataRect dr;
+    if (mv_graphics_png_read(filename, &dr.mData, &dr.mWidth, &dr.mHeight, &dr.mBits, 0))
+    {
+        mv_graphics_tools_swapwords(&dr);
+        for (int y = 0; y < dr.mHeight; y++)
+        {
+            for (int x = 0; x < dr.mWidth; x++)
+            {
+                unsigned int offset = y * dr.mWidth + x;
+                const short* data16 = ((const short*) dr.mData) + offset;
+                if ((*data16 >= vmin) && (*data16 <= vmax))
+                {
+                    if (vmap.find(*data16) != vmap.end())
+                    {
+                        vmap[*data16] = vmap[*data16] + 1;
+                    }
+                    else
+                    {
+                        vmap[*data16] = 1;
+                    }
+                    count++;
+                }                
+            }
+        }
+    }
+    std::set<SValpair> vset;
+    for (auto it = vmap.begin(); it != vmap.end(); ++it)
+    {
+        SValpair vp;
+        vp.value = it->first;
+        vp.count = it->second;
+        vset.insert(vp);
+    }
+    for (auto it = vset.begin(); it != vset.end(); ++it)
+    {
+       cout << "value=" << it->value << " count=" << it->count << endl;   
+    }
+    
+    return count;
+}
+
+//---------------------------------------------------------------------------
+//
+// Klasse:    static
+// Methode:   ReplaceValues
+//
+//
+//---------------------------------------------------------------------------
+
+static unsigned int ReplaceValues(const char* filename, int vmin, int vmax, int vrepl)
+{
+    unsigned int count = 0;
+    SDataRect dr;
+    if (mv_graphics_png_read(filename, &dr.mData, &dr.mWidth, &dr.mHeight, &dr.mBits, 0))
+    {
+        mv_graphics_tools_swapwords(&dr);
+        for (int y = 0; y < dr.mHeight; y++)
+        {
+            for (int x = 0; x < dr.mWidth; x++)
+            {
+                unsigned int offset = y * dr.mWidth + x;
+                short* data16 = ((short*) dr.mData) + offset;
+                if ((*data16 >= vmin) && (*data16 <= vmax))
+                {
+                    *data16 = vrepl;
+                    count++;
+                }
+            }
+        }                    
+    }
+    
+    if (count >  0)
+    {
+        cout << "writing output.png.." << endl;
+        mv_graphics_tools_swapwords(&dr);
+        mv_graphics_png_write("ouput.png", dr.mData, dr.mWidth, dr.mHeight, dr.mBits);   
+    }    
+    return count;
+}
+
 //---------------------------------------------------------------------------
 //
 // Klasse:    Global
@@ -319,7 +442,7 @@ int main(int argc, char* argv[])
         int AnzahlFiles;
         int SmoothFaktor = 0;
         int RandFaktor = 1;
-
+        int repvalue = 0;
 
         for (int i = 2; i < argc; i++)
         {
@@ -329,6 +452,24 @@ int main(int argc, char* argv[])
             {
                 SmoothFaktor = mvStringtool::Cast<int>(argv[i+1]);
             }
+            if (cmd == "-findvalues")
+            {
+                int vmin = mvStringtool::Cast<int>(argv[i+1]);
+                int vmax = mvStringtool::Cast<int>(argv[i+2]);
+                int values = FindValues(argv[1], vmin, vmax);
+                cout << "values found:" << values << endl;
+                return 0;
+            }            
+            else
+            if (cmd == "-replacevalues")
+            {
+                int vmin  = mvStringtool::Cast<int>(argv[i+1]);
+                int vmax  = mvStringtool::Cast<int>(argv[i+2]);
+                int vrepl = mvStringtool::Cast<int>(argv[i+3]);
+                int values = ReplaceValues(argv[1], vmin, vmax, vrepl);
+                cout << "values replaced:" << values << endl;
+                return 0;
+            }                        
             else
             if (cmd == "-random")
             {
@@ -341,6 +482,12 @@ int main(int argc, char* argv[])
                 cout << "  mask file:" << MaskFile << endl;
                 i += 1;
             }
+            else
+            if (cmd == "-repvalue")
+            {
+                repvalue = mvStringtool::Cast<int>(argv[i+1]);                
+                i += 1;
+            }            
             else
             if (cmd == "-outfile")
             {
@@ -365,12 +512,15 @@ int main(int argc, char* argv[])
             {
                 case 8:
 
-                    ProcessFillhole<unsigned char>(&dr, SmoothFaktor, RandFaktor, 0);
+                    cout << "8 bit, repvalue=" << repvalue << endl;
+                    ProcessFillhole<unsigned char>(&dr, SmoothFaktor, RandFaktor, repvalue);
                     break;
 
                 case 16:
 
-                    ProcessFillhole<short>(&dr, SmoothFaktor, RandFaktor, 0);
+                    cout << "16 bit, repvalue=" << repvalue << endl;
+                    mv_graphics_tools_swapwords(&dr);
+                    ProcessFillhole<short>(&dr, SmoothFaktor, RandFaktor, repvalue);                    
                     break;
                     
                 case 24:
@@ -397,7 +547,8 @@ int main(int argc, char* argv[])
                   break;
      
             }
-            mv_graphics_png_write("ouput.png", dr.mData, dr.mWidth, dr.mHeight, dr.mBits);
+            cout << "writing file " << OutFile << endl;
+            mv_graphics_png_write(OutFile, dr.mData, dr.mWidth, dr.mHeight, dr.mBits);
 
         }
     }
@@ -407,13 +558,14 @@ int main(int argc, char* argv[])
                 << "  options:" << endl
                 << "  [-smooth n] = number of smooth stages" << endl
                 << "  [-random n] = number of randomize stages" << endl
+                << "  [-repvalue n] = replace value (only for 8 and 16 bit)" << endl
                 << "  [-outfile <file>] = optional output file" << endl
-                << "  supported files: 24 or 32 bit PNG" << endl
+                << "  supported files: 8, 16, 24 or 32 bit PNG" << endl
                 << endl
-                << "  *** Mark the errors in the picture with BLACK color (#000000)" 
+                << "  *** 24/32 bit: mark the errors in the picture with BLACK color (#000000)" 
                 << "  *** and run the tool" << endl
                 << endl
-                << "version 4.0" << endl;
+                << "version 5.0" << endl;
     }
 
     return 0;
